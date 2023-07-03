@@ -1,0 +1,6 @@
+/config.json
+/database.json
+/reports/
+/.venv/
+/query.sql
+/.idea/
