@@ -84,7 +84,6 @@ def main():
     print(f"Версия операционной системы: {operating_system}")
 
     folder_path = input("Введите путь к папке для поиска файлов .fdb: ")
-    folder_path = folder_path
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_file_path = os.path.join(script_dir, "config.json")
@@ -121,8 +120,7 @@ def main():
         print("Список баз данных сохранен в файле database.json.")
 
     current_date = datetime.now().strftime("%d-%m-%Y")
-    report_folder = os.path.join(report_dir, current_date)
-    os.makedirs(report_folder, exist_ok=True)
+    os.makedirs(report_dir, exist_ok=True)
 
     proceed = input("Считаем коров? (y/n): ")
     if proceed.lower() == "y":
@@ -130,7 +128,9 @@ def main():
             print("Запуск SQL-запроса...")
             database_name = os.path.splitext(os.path.basename(database["database_path"]))[0]
             file_name = f"{database_name}_{datetime.now().strftime('%H-%M-%S')}.xlsx"
-            file_path = os.path.join(report_folder, file_name)
+
+            database_path = os.path.dirname(database["database_path"])
+            file_path = os.path.join(database_path, file_name)
 
             conn_str = {
                 "dsn": f'{database["hostname"]}:{database["database_path"]}',
