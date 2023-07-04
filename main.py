@@ -133,9 +133,6 @@ def main():
         print("Файл query.sql не найден.")
         create_query_file(query_file_path)
 
-    with open(query_file_path, "r", encoding="utf-8") as query_file:
-        sql_query = query_file.read()
-
     fdb_files = find_fdb_files(folder_path)
     database_list = create_database_list(fdb_files, config)
 
@@ -153,45 +150,46 @@ def main():
     current_date = datetime.now().strftime("%d-%m-%Y")
     os.makedirs(report_dir, exist_ok=True)
 
-    try:
-        proceed = input("Считаем коров? (y/n): ")
-        if proceed.lower() == "y":
-            for database in database_list:
-                print("Запуск SQL-запроса...")
-                database_name = os.path.splitext(os.path.basename(database["database_path"]))[0]
-                file_name = f"{database_name}_{datetime.now().strftime('%H-%M-%S')}.xlsx"
+    proceed = input("Считаем коров? (y/n): ")
+    if proceed.lower() == "y":
+        for database in database_list:
+            print("Запуск SQL-запроса...")
+            with open(query_file_path, "r", encoding="utf-8") as query_file:
+                sql_query = query_file.read()
+            database_name = os.path.splitext(os.path.basename(database["database_path"]))[0]
+            file_name = f"{database_name}_{datetime.now().strftime('%H-%M-%S')}.xlsx"
 
-                database_path = os.path.dirname(database["database_path"])
-                file_path = os.path.join(appdata_temp_dir, os.path.basename(database["database_path"]))
+            database_path = os.path.dirname(database["database_path"])
+            file_path = os.path.join(appdata_temp_dir, os.path.basename(database["database_path"]))
 
-                # Копирование файла базы данных в папку TempCows
-                shutil.copy2(database["database_path"], file_path)
+            # Копирование файла базы данных в папку TempCows
+            shutil.copy2(database["database_path"], file_path)
 
-                conn_str = {
-                    "dsn": f'{database["hostname"]}:{file_path}',
-                    "user": database["username"],
-                    "password": database["password"],
-                    "no_db_triggers": True
-                }
+            conn_str = {
+                "dsn": f'{database["hostname"]}:{file_path}',
+                "user": database["username"],
+                "password": database["password"],
+                "no_db_triggers": True
+            }
 
-                result_set = execute_sql_query(conn_str, sql_query)
-                save_to_excel(result_set, file_path)
+            result_set = execute_sql_query(conn_str, sql_query)
+            save_to_excel(result_set, file_path)
 
-                # Получение относительного пути базы данных относительно исходной папки
-                relative_db_path = os.path.relpath(database_path, folder_path)
+            # Получение относительного пути базы данных относительно исходной папки
+            relative_db_path = os.path.relpath(database_path, folder_path)
 
-                # Построение пути для сохранения файла отчета с сохранением структуры папок
-                report_subdir = os.path.join(report_dir, relative_db_path)
-                os.makedirs(report_subdir, exist_ok=True)
-                report_file_path = os.path.join(report_subdir, file_name)
-                shutil.move(file_path, report_file_path)
+            # Построение пути для сохранения файла отчета с сохранением структуры папок
+            report_subdir = os.path.join(report_dir, relative_db_path)
+            os.makedirs(report_subdir, exist_ok=True)
+            report_file_path = os.path.join(report_subdir, file_name)
+            shutil.move(file_path, report_file_path)
 
-                print(f"Результаты SQL-запроса сохранены в файле: {report_file_path}")
-        else:
-            print("Программа завершена.")
-    finally:
-        # Удаление папки TempCows
-        delete_temp_cows_folder(appdata_temp_dir)
+            print(f"Результаты SQL-запроса сохранены в файле: {report_file_path}")
+    else:
+        print("Программа завершена.")
+
+    # Удаление папки TempCows
+    delete_temp_cows_folder(appdata_temp_dir)
 
 
 if __name__ == "__main__":
