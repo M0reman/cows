@@ -136,6 +136,7 @@ def main():
                 "dsn": f'{database["hostname"]}:{database["database_path"]}',
                 "user": database["username"],
                 "password": database["password"],
+                "no_db_triggers": True
             }
 
             result_set = execute_sql_query(conn_str, sql_query)
