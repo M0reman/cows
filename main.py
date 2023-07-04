@@ -98,6 +98,14 @@ def main():
     operating_system = platform.system() + ' ' + platform.release() + ' ' + platform.version()
     print(f"Версия операционной системы: {operating_system}")
 
+    print(r"""
+   ___ _____      _____   ___                   _      
+  / __/ _ \ \    / / __| | _ \___ _ __  ___ _ _| |_ ___
+ | (_| (_) \ \/\/ /\__ \ |   / -_) '_ \/ _ \ '_|  _(_-<
+  \___\___/ \_/\_/ |___/ |_|_\___| .__/\___/_|  \__/__/
+                                 |_|                   
+    """)
+
     appdata_temp_dir = create_temp_cows_folder()
 
     folder_path = input("Введите путь к папке для поиска файлов .fdb: ")
