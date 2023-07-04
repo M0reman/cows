@@ -6,7 +6,15 @@ import fdb
 import openpyxl
 from datetime import datetime
 import shutil
+import sys
 
+def get_script_directory():
+    if getattr(sys, 'frozen', False):
+        # Код запущен в виде исполняемого файла
+        return os.path.dirname(sys.executable)
+    else:
+        # Код запущен в виде скрипта .py
+        return os.path.dirname(os.path.abspath(__file__))
 
 def create_temp_cows_folder():
     appdata_temp_dir = os.path.join(os.getenv('APPDATA'), 'TempCows')
@@ -43,24 +51,21 @@ def create_database_list(fdb_files, config):
     return database_list
 
 
-def save_to_json(database_list):
-    with open("database.json", "w", encoding="utf-8") as file:
+def save_to_json(database_list, file_path):
+    with open(file_path, "w", encoding="utf-8") as file:
         json.dump(database_list, file, indent=4, ensure_ascii=False)
 
 
-def create_config_file():
+def create_config_file(file_path):
     config = {}
     config["hostname"] = input("Введите имя хоста: ")
     config["username"] = input("Введите имя пользователя: ")
     config["password"] = input("Введите пароль: ")
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_file_path = os.path.join(script_dir, "config.json")
-
-    with open(config_file_path, "w", encoding="utf-8") as config_file:
+    with open(file_path, "w", encoding="utf-8") as config_file:
         json.dump(config, config_file, indent=4, ensure_ascii=False)
 
-    print(f"Файл конфигурации создан: {config_file_path}")
+    print(f"Файл конфигурации создан: {file_path}")
     return config
 
 
@@ -110,15 +115,16 @@ def main():
 
     folder_path = input("Введите путь к папке для поиска файлов .fdb: ")
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_file_path = os.path.join(script_dir, "config.json")
+    script_dir = get_script_directory()
+    database_json_file_path = os.path.join(script_dir, "database.json")
     report_dir = os.path.join(script_dir, "reports")
     query_file_path = os.path.join(script_dir, "query.sql")
+    config_file_path = os.path.join(script_dir, "config.json")
 
     config = {}
     if not os.path.isfile(config_file_path):
         print("Файл конфигурации не найден.")
-        config = create_config_file()
+        config = create_config_file(config_file_path)
     else:
         with open(config_file_path, "r", encoding="utf-8") as config_file:
             config = json.load(config_file)
@@ -133,15 +139,15 @@ def main():
     fdb_files = find_fdb_files(folder_path)
     database_list = create_database_list(fdb_files, config)
 
-    if os.path.isfile("database.json"):
+    if os.path.isfile(database_json_file_path):
         overwrite = input("Файл database.json уже существует. Хотите перезаписать его? (y/n): ")
         if overwrite.lower() == "y":
-            save_to_json(database_list)
+            save_to_json(database_list, database_json_file_path)
             print("Список баз данных сохранен в файле database.json.")
         else:
             print("Продолжаем работу с существующим файлом database.json.")
     else:
-        save_to_json(database_list)
+        save_to_json(database_list, database_json_file_path)
         print("Список баз данных сохранен в файле database.json.")
 
     current_date = datetime.now().strftime("%d-%m-%Y")
