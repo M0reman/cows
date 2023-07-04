@@ -5,6 +5,21 @@ import json
 import fdb
 import openpyxl
 from datetime import datetime
+import shutil
+
+
+def create_temp_cows_folder():
+    appdata_temp_dir = os.path.join(os.getenv('APPDATA'), 'TempCows')
+    os.makedirs(appdata_temp_dir, exist_ok=True)
+    return appdata_temp_dir
+
+
+def delete_temp_cows_folder(appdata_temp_dir):
+    if os.path.exists(appdata_temp_dir):
+        for file_name in os.listdir(appdata_temp_dir):
+            file_path = os.path.join(appdata_temp_dir, file_name)
+            os.remove(file_path)
+        os.rmdir(appdata_temp_dir)
 
 
 def find_fdb_files(folder_path):
@@ -83,6 +98,8 @@ def main():
     operating_system = platform.system() + ' ' + platform.release() + ' ' + platform.version()
     print(f"Версия операционной системы: {operating_system}")
 
+    appdata_temp_dir = create_temp_cows_folder()
+
     folder_path = input("Введите путь к папке для поиска файлов .fdb: ")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -122,29 +139,45 @@ def main():
     current_date = datetime.now().strftime("%d-%m-%Y")
     os.makedirs(report_dir, exist_ok=True)
 
-    proceed = input("Считаем коров? (y/n): ")
-    if proceed.lower() == "y":
-        for database in database_list:
-            print("Запуск SQL-запроса...")
-            database_name = os.path.splitext(os.path.basename(database["database_path"]))[0]
-            file_name = f"{database_name}_{datetime.now().strftime('%H-%M-%S')}.xlsx"
+    try:
+        proceed = input("Считаем коров? (y/n): ")
+        if proceed.lower() == "y":
+            for database in database_list:
+                print("Запуск SQL-запроса...")
+                database_name = os.path.splitext(os.path.basename(database["database_path"]))[0]
+                file_name = f"{database_name}_{datetime.now().strftime('%H-%M-%S')}.xlsx"
 
-            database_path = os.path.dirname(database["database_path"])
-            file_path = os.path.join(database_path, file_name)
+                database_path = os.path.dirname(database["database_path"])
+                file_path = os.path.join(appdata_temp_dir, os.path.basename(database["database_path"]))
 
-            conn_str = {
-                "dsn": f'{database["hostname"]}:{database["database_path"]}',
-                "user": database["username"],
-                "password": database["password"],
-                "no_db_triggers": True
-            }
+                # Копирование файла базы данных в папку TempCows
+                shutil.copy2(database["database_path"], file_path)
 
-            result_set = execute_sql_query(conn_str, sql_query)
-            save_to_excel(result_set, file_path)
+                conn_str = {
+                    "dsn": f'{database["hostname"]}:{file_path}',
+                    "user": database["username"],
+                    "password": database["password"],
+                    "no_db_triggers": True
+                }
 
-            print(f"Результаты SQL-запроса сохранены в файле: {file_path}")
-    else:
-        print("Программа завершена.")
+                result_set = execute_sql_query(conn_str, sql_query)
+                save_to_excel(result_set, file_path)
+
+                # Получение относительного пути базы данных относительно исходной папки
+                relative_db_path = os.path.relpath(database_path, folder_path)
+
+                # Построение пути для сохранения файла отчета с сохранением структуры папок
+                report_subdir = os.path.join(report_dir, relative_db_path)
+                os.makedirs(report_subdir, exist_ok=True)
+                report_file_path = os.path.join(report_subdir, file_name)
+                shutil.move(file_path, report_file_path)
+
+                print(f"Результаты SQL-запроса сохранены в файле: {report_file_path}")
+        else:
+            print("Программа завершена.")
+    finally:
+        # Удаление папки TempCows
+        delete_temp_cows_folder(appdata_temp_dir)
 
 
 if __name__ == "__main__":
