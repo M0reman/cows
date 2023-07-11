@@ -8,6 +8,7 @@ from datetime import datetime
 import shutil
 import sys
 
+
 def get_script_directory():
     if getattr(sys, 'frozen', False):
         # Код запущен в виде исполняемого файла
@@ -15,6 +16,7 @@ def get_script_directory():
     else:
         # Код запущен в виде скрипта .py
         return os.path.dirname(os.path.abspath(__file__))
+
 
 def create_temp_cows_folder():
     appdata_temp_dir = os.path.join(os.getenv('APPDATA'), 'TempCows')
@@ -147,6 +149,10 @@ def main():
         save_to_json(database_list, database_json_file_path)
         print("Список баз данных сохранен в файле database.json.")
 
+        # Load the database list from the database.json file
+    with open(database_json_file_path, "r", encoding="utf-8") as database_file:
+        database_list = json.load(database_file)
+
     current_date = datetime.now().strftime("%d-%m-%Y")
     os.makedirs(report_dir, exist_ok=True)
 
@@ -172,19 +178,29 @@ def main():
                 "no_db_triggers": True
             }
 
-            result_set = execute_sql_query(conn_str, sql_query)
-            save_to_excel(result_set, file_path)
+            try:
+                result_set = execute_sql_query(conn_str, sql_query)
+                save_to_excel(result_set, file_path)
 
-            # Получение относительного пути базы данных относительно исходной папки
-            relative_db_path = os.path.relpath(database_path, folder_path)
+                # Получение относительного пути базы данных относительно исходной папки
+                relative_db_path = os.path.relpath(database_path, folder_path)
 
-            # Построение пути для сохранения файла отчета с сохранением структуры папок
-            report_subdir = os.path.join(report_dir, relative_db_path)
-            os.makedirs(report_subdir, exist_ok=True)
-            report_file_path = os.path.join(report_subdir, file_name)
-            shutil.move(file_path, report_file_path)
+                # Построение пути для сохранения файла отчета с сохранением структуры папок
+                report_subdir = os.path.join(report_dir, relative_db_path)
+                os.makedirs(report_subdir, exist_ok=True)
+                report_file_path = os.path.join(report_subdir, file_name)
+                shutil.move(file_path, report_file_path)
 
-            print(f"Результаты SQL-запроса сохранены в файле: {report_file_path}")
+                print(f"Результаты SQL-запроса сохранены в файле: {report_file_path}")
+            except Exception as e:
+                error_message = f"{datetime.now().strftime('%H:%M:%S')} Ошибка при выполнении SQL-запроса для базы данных: {database['database_path']}\n"
+                error_message += f"Ошибка: {str(e)}\n"
+
+                with open("error.log", "a", encoding="utf-8") as error_log:
+                    error_log.write(error_message)
+
+                print(f"Произошла ошибка при выполнении SQL-запроса для базы данных: {database['database_path']}")
+
     else:
         print("Программа завершена.")
 
